@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Connect3", "Connect3.vcxproj", "{DB1E8CE4-9BE9-4B9F-BD56-14B2AEB4E63F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DB1E8CE4-9BE9-4B9F-BD56-14B2AEB4E63F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DB1E8CE4-9BE9-4B9F-BD56-14B2AEB4E63F}.Debug|Win32.Build.0 = Debug|Win32
+		{DB1E8CE4-9BE9-4B9F-BD56-14B2AEB4E63F}.Release|Win32.ActiveCfg = Release|Win32
+		{DB1E8CE4-9BE9-4B9F-BD56-14B2AEB4E63F}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

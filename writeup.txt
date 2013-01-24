@@ -1,0 +1,50 @@
+Steve Coward
+steve-coward@comcast.net
+CS541
+Winter 2011
+HW 2 Connect3
+
+With a 3x4 board and the computer playing first, my program will perform, using a Minimax with Alpha-Beta Pruning algorithm, a complete search of all board positions for the computer's opening move.  The result of this search is that with perfect play by both sides the game ill be drawn in 12 plie1.  To generate this result, my program performs 10k boardevaluations in about less than 1 seconds.  A game history is included below.
+
+With a 3x10 board and the computer plaing first, my program will perform, using a Minimax with Alpha-Beta Pruning algorthm, a complete search of all board positions for the computer's opening mov.  The result of this search is that with perfect play by both sides the firstplayer will win in 27 plies.  To generate this result, my program performs 43.8M board evaluations in about 18 seconds.  A game history is included below.
+
+My program shows that 3 x n is drawn game for n = 3-9,11,13 and 3 x m is first player win for m = 10, 12.
+
+The core algorithm that I implemented closely follows the algorithm laid out in the text.  I added an iterative deepening loop around my core algorithm.  My evaluation function, called IncEvaluate(), values winning positions only.  Winning sooner is favored over winning later by weighting each winning position inversely with the number of moves required.
+
+I had hoped to implement recognition of blocking moves (that prevent the opponent from winning) which would be very useful in situations where the full search will not complete.  Blocking moves would be weightd one less than winning moves of the same move depth.  Unfortunately I ran out of time.  As it is, my program displays zero intelligence when it is forced to move before the search completes.  Generally the computer will place its checker in the first column.  On a standard 6x7 Connect4 board and rules, my program will easily lose in the minimum 7 moves.
+
+My program is a very functional game that provides a reasonable playing experience for the human player.  Some features that were added include:
+  1. control of computer computation time
+      (default in Release mode is 10s; in Debug mode, infinite)
+  2. the ability to swap sides at any time
+  3. the ability to force the computer to make an immediate move
+  4. the ability to undo moves
+  5. the ability to setup a desired board position
+  6. "win/lose/draw in x moves" analysis on computer moves
+      (when the search fully completes)
+  7. Fully configurable board dimensions and connection length
+      (edit gamedef.h and recompile)
+  8. the ability to request a hint from the computer
+      (during the human player's turn)
+  9. evaluation time, number of positions evaluated and max recursion depth
+      are reported with each computer move.
+      
+The program was written in C++ using Visual Studio 2010.  OpenGL and the FLTK library were used to implement the graphics for my program.  To ensure a responsive GUI, the Minimax search is performed in a separate thread.
+      
+ 1.  b1, b2     1. a1, c1
+ 2.  b3, b4     2. c2, c3
+ 3.  a1, c1     3. b1, b2
+ 4.  c2, c3     4. b3, a2
+ 5.  c4, a2     5. a3, a4
+ 6.  a3, a4     6. b4  c4 Draw
+ 7.  a5, b5
+ 8.  b6, b7
+ 9.  b8, b9
+10. b10, 16
+11.  a7, c5
+12.  c6, c7
+13.  c8, a8
+14.  a9  Win
+  
+
