@@ -12,7 +12,7 @@ extern CRITICAL_SECTION g_csMoveList;
 CConnect3AIThread::CConnect3AIThread(int numRows, int numCols, int numCons)
 {
 #ifdef _DEBUG
-	t.disable(true);
+	//t.disable(true);
 	setTimeOut(10); // in seconds
 #else
 	setTimeOut(10); // in seconds
@@ -20,6 +20,7 @@ CConnect3AIThread::CConnect3AIThread(int numRows, int numCols, int numCons)
 #ifdef _DEBUG
 	m_bGraphicDebug = false;
 #endif // _DEBUG
+	m_bTimeOutOnDepthLimit = false;
 	m_bExit = false;
 	m_p1 = new player();
 	m_p2 = new player();
@@ -118,12 +119,12 @@ void CConnect3AIThread::GameReset()
 // Return (row,column) pair of the move (zero-based).
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-bool CConnect3AIThread::CheckLegality(Point* p, int& r, int& c)
+bool CConnect3AIThread::CheckLegality(Point& p, int& r, int& c)
 {
 	// must account for height of menu and title bar here
 	// since (x,y) = (0,0) just below menu bar and to right of side frame
-	c = (p->x + getCellSize() - m_boardPosX)/getCellSize() - 1;
-	r = getNumRows() + 1 - ((p->y + getCellSize() - 25)/getCellSize()) - 1;
+	c = (p.x + getCellSize() - m_boardPosX)/getCellSize() - 1;
+	r = getNumRows() + 1 - ((p.y + getCellSize() - 25)/getCellSize()) - 1;
 	if ((r >= 0) && (r < getNumRows())) {
 		if ((c >= 0) && (c < getNumCols())) {
 			return(
@@ -142,7 +143,7 @@ bool CConnect3AIThread::CheckLegality(Point* p, int& r, int& c)
 // Return true if move was legal.
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Move* CConnect3AIThread::DoHumanMove(Point* p)
+Move* CConnect3AIThread::DoHumanMove(Point& p)
 {
 	int r, c;
 	Move* m = NULL;
@@ -184,21 +185,21 @@ void CConnect3AIThread::Connect3()
 		}
 
 		//::Sleep(1000);
-		if (m_gameState & GAME_STARTED) {
+		if (m_gameState & (GAME_STARTED | GAME_OVER)) {
 			Move* m;
 			if (m_pTurn->human) {
 				setStatus("It's your turn");
-				while (!m_qClicks.empty()) {
-					Point* p = m_qClicks.front();
-					m_qClicks.pop();
-					switch (p->x) {
-						case -1:
+				while (!m_qCmds.empty()) {
+					Cmd* c = m_qCmds.front();
+					m_qCmds.pop();
+					switch (c->cmd) {
+						case NEW_GAME:
 							{
 								// New game requested
 								setGameState(GAME_RESET);
 								break;
 							}
-						case -4:
+						case ANALYSIS:
 							{
 								// Toggle human move analysis mode
 								//   - Can be time consuming
@@ -210,7 +211,7 @@ void CConnect3AIThread::Connect3()
 								}
 								break;
 							}
-						case -7:
+						case DISABLE_TIMER:
 							{
 								// Toggle timer
 								if  (t.getDisable()) {
@@ -221,27 +222,27 @@ void CConnect3AIThread::Connect3()
 								}
 								break;
 							}
-						case -6:
+						case UNDO:
 							{
 								// Undo last two moves
 								UndoMove();
 								UndoMove();
 								break;
 							}
-						case -5:
+						case SETUP_GAME:
 							{
 								// Toggle game setup mode
 								setGameState(GAME_SETUP);
 								m_bGameSetup = true;
 								break;
 							}
-						case -2:
+						case HINT:
 							{
 								// Hint requested
 								DoMiniMax(true);
 								break;
 							}
-						case -3:
+						case SWAP_SIDES:
 							{
 								// Swap side requested
 								int tempc;
@@ -272,7 +273,7 @@ void CConnect3AIThread::Connect3()
 							}
 						default:
 							{
-								if ((m = DoHumanMove(p)) != NULL) {
+								if ((m = DoHumanMove(c->p)) != NULL) {
 									if (IncEvaluateWin(m->row, m->col)) {
 										setGameState(GAME_OVER_HUMAN_WINS);
 										setStatus("You Win");
@@ -280,7 +281,7 @@ void CConnect3AIThread::Connect3()
 								}
 							}
 					}
-					delete p;
+					delete c;
 				}
 			}
 			else  {
@@ -304,11 +305,11 @@ void CConnect3AIThread::Connect3()
 			}
 		}
 		else if (m_gameState == GAME_SETUP) {
-			while (!m_qClicks.empty()) {
-				Point* p = m_qClicks.front();
-				m_qClicks.pop();
-				switch (p->x) {
-					case -5:
+			while (!m_qCmds.empty()) {
+				Cmd* c = m_qCmds.front();
+				m_qCmds.pop();
+				switch (c->cmd) {
+					case SETUP_GAME:
 						{
 							// Toggle game setup mode
 							if (m_bGameSetup) {
@@ -323,7 +324,7 @@ void CConnect3AIThread::Connect3()
 							}
 							break;
 						}
-					case -6:
+					case UNDO:
 						{
 							// Undo last move
 							UndoMove();
@@ -332,7 +333,7 @@ void CConnect3AIThread::Connect3()
 					default:
 						{
 							Move* m;
-							if ((m = DoHumanMove(p)) != NULL) {
+							if ((m = DoHumanMove(c->p)) != NULL) {
 								if (IncEvaluateWin(m->row, m->col)) {
 									// Board contains winning combination.
 									// Disallow last placement.
@@ -348,10 +349,10 @@ void CConnect3AIThread::Connect3()
 			}
 		}
 		else {
-			while (!m_qClicks.empty()) {
-				Point* p = m_qClicks.front();
-				m_qClicks.pop();
-				if (p->x == -1) {
+			while (!m_qCmds.empty()) {
+				Cmd* c = m_qCmds.front();
+				m_qCmds.pop();
+				if (c->cmd == NEW_GAME) {
 					setGameState(GAME_RESET);
 				}
 			}
@@ -516,7 +517,7 @@ void CConnect3AIThread::UndoMove()
 int CConnect3AIThread::MiniMaxHuman(
 	int depth,
 	int numEmptySlots,
-	int* movecol,
+	int& movecol,
 	int prow,
 	int pcol,
 	int alpha,
@@ -554,7 +555,7 @@ int CConnect3AIThread::MiniMaxHuman(
 				v = MiniMaxComputer(
 					depth+1,
 					numEmptySlots-1,
-					&mcc,
+					mcc,
 					row,
 					col,
 					alpha,
@@ -568,7 +569,7 @@ int CConnect3AIThread::MiniMaxHuman(
 				v = MiniMaxComputer(
 					depth+1,
 					numEmptySlots-1,
-					&mcc,
+					mcc,
 					row,
 					col,
 					alpha,
@@ -592,7 +593,7 @@ int CConnect3AIThread::MiniMaxHuman(
 #endif
 			if (v <= minV) {
 				minV = v;
-				*movecol = mc;
+				movecol = mc;
 			}
 			if (v < beta) {
 				beta = v;
@@ -600,7 +601,7 @@ int CConnect3AIThread::MiniMaxHuman(
 			if (alpha >= beta) {
 				return(beta);
 			}
-			if (t.isTimeout(m_timeoutSec)) {
+			if (t.isTimeout(getTimeOut())) {
 				m_bTimedOut = true;
 				return(beta);
 			}
@@ -619,7 +620,7 @@ int CConnect3AIThread::MiniMaxHuman(
 int CConnect3AIThread::MiniMaxComputer(
 	int depth, // current recursion depth
 	int numEmptySlots, // the number of empty slots remaining
-	int* movecol, // return the chosen column here
+	int& movecol, // return the chosen column here
 	int prow, // previous move's row
 	int pcol, // previous move's column
 	int alpha,
@@ -654,7 +655,7 @@ int CConnect3AIThread::MiniMaxComputer(
 				v = MiniMaxHuman(
 					depth+1,
 					numEmptySlots-1,
-					&mcc,
+					mcc,
 					row,
 					col,
 					alpha,
@@ -668,7 +669,7 @@ int CConnect3AIThread::MiniMaxComputer(
 				v = MiniMaxHuman(
 					depth+1,
 					numEmptySlots-1,
-					&mcc,
+					mcc,
 					row,
 					col,
 					alpha,
@@ -692,7 +693,7 @@ int CConnect3AIThread::MiniMaxComputer(
 #endif
 			if (v > maxV) {
 				maxV = v;
-				*movecol = mc;
+				movecol = mc;
 			}
 			if (v > alpha) {
 				alpha = v;
@@ -700,7 +701,7 @@ int CConnect3AIThread::MiniMaxComputer(
 			if (alpha >= beta) {
 				return(alpha);
 			}
-			if (t.isTimeout(m_timeoutSec)) {
+			if (t.isTimeout(getTimeOut())) {
 				m_bTimedOut = true;
 				return(alpha);
 			}
@@ -747,7 +748,7 @@ Move* CConnect3AIThread::DoMiniMax(bool bHintMode)
 		v = MiniMaxComputer(
 			getDepth(), // max recursive depth for this iteration
 			getNumSlots()-m_plyNum+1, // starting valuation
-			&col, // best column found
+			col, // best column found
 			0, // row of last placed checker (for incremental evaluation)
 			0, // col of last placed checker (for incremental evaluation)
 			-(getNumSlots()-m_plyNum), // alpha

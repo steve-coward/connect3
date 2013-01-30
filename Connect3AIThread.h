@@ -31,6 +31,7 @@ private:
 #endif // _DEBUG
 	bool m_bGameSetup;
 	bool m_bTimedOut;
+	bool m_bTimeOutOnDepthLimit;
 	bool m_bHitDepthLimit;
 	bool m_bAnalysisMode;
 
@@ -56,11 +57,12 @@ private:
 	unsigned long m_timeoutSec;
 public:
 	void setTimeOut(unsigned long timeoutSec) { m_timeoutSec = timeoutSec; }
+	unsigned long getTimeOut() {return(m_timeoutSec); }
 
 public:
 	std::list<checker*> m_listCheckers;
 	std::list<Move*> m_listMoves;
-	std::queue<Point*> m_qClicks;
+	std::queue<Cmd*> m_qCmds;
 
 public:
 	CConnect3AIThread(int numRows, int numCols, int numCons);
@@ -72,16 +74,30 @@ public:
 private:
 	void GameReset();
 	Move* DoMiniMax(bool bHintMode);
-	int MiniMaxHuman(int depth, int numEmptySlots, int* movecol,  int prow, int pcol, int alpha, int beta);
-	int MiniMaxComputer(int depth, int numEmptySlots, int* movecol,  int prow, int pcol, int alpha, int beta);
-	Move* DoHumanMove(Point* p);
+	int MiniMaxHuman(
+		int depth,
+		int numEmptySlots,
+		int& movecol,
+		int prow,
+		int pcol,
+		int alpha,
+		int beta);
+	int MiniMaxComputer(
+		int depth,
+		int numEmptySlots,
+		int& movecol,
+		int prow,
+		int pcol,
+		int alpha,
+		int beta);
+	Move* DoHumanMove(Point& p);
 	int DoMove(int col, player* p, bool bPlace);
 	void UndoMove();
 	bool GameOver(intv2d* board);
 	int IncEvaluateWin(int row, int col);
 	int IncEvaluateBlock(int row, int col);
 	bool ColOpen(intv2d& board, int col, int* row);
-	bool CheckLegality(Point* p, int& r, int& c);
+	bool CheckLegality(Point& p, int& r, int& c);
 #ifdef _DEBUG
 	void prettyPrintBoard(intv2d* pvBoard, int boardNum);
 #endif // _DEBUG

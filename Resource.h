@@ -13,6 +13,7 @@
 #define IDC_CONNECT3                    109
 #define IDR_MAINFRAME                   128
 #define IDD_HELPBOX                     129
+#define IDM_LEVEL_FIRSTLEVEL            32000
 #define IDM_LEVEL_0SECOND               32000
 #define IDM_LEVEL_1SECOND               32001
 #define IDM_LEVEL_2SECONDS              32002
@@ -20,21 +21,17 @@
 #define IDM_LEVEL_10SECONDS             32010
 #define IDM_LEVEL_30SECONDS             32030
 #define IDM_LEVEL_1MINUTE               32060
+#define IDM_LEVEL_LASTLEVEL				32060
 #define IDM_NEWGAME                     32773
 #define IDM_HINT                        32775
 #define IDM_SWAPSIDES                   32777
 #define IDM_ANALYSIS                    32779
-#define ID_OPTIONS_LEVEL                32780
-#define ID_LEVEL_DISABLETIMER           32793
 #define IDM_LEVEL_DISABLETIMER          32794
-#define ID_OPTIONS_SETUPGAME            32795
-#define IDM_OPTIONS_SETUPGAME           32796
 #define IDM_SETUPGAME                   32797
-#define ID_OPTIONS_FORCEMOVE            32798
 #define IDM_FORCEMOVE                   32799
-#define ID_OPTIONS_UNDOMOVE             32800
 #define IDM_UNDOMOVE                    32801
-#define ID_HELP_HELP                    32802
+#define IDM_HELP                        32802
+#define IDM_DEBUG                        32803
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

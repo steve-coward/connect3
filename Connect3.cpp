@@ -15,7 +15,6 @@
 #include <io.h> // Console
 #include <fcntl.h> // Console
 
-
 #define MAX_LOADSTRING 100
 
 //struct checker {
@@ -40,6 +39,7 @@ CRITICAL_SECTION g_csCheckerList;
 ATOM				MyRegisterClass(HINSTANCE hInstance);
 BOOL				InitInstance(HINSTANCE, int);
 LRESULT CALLBACK	WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK	QuitConfirm(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	About(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK	Help(HWND, UINT, WPARAM, LPARAM);
 
@@ -66,8 +66,6 @@ VOID CALLBACK RenderTimerCallBack(
 	gAppGraphics->RenderIt();
 	//std::cout << "Finished Rendering.\n" << std::flush;
 }
-
-
 
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
@@ -111,8 +109,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	//gAppGraphics->m_csCheckerList = g_csCheckerList;
 	//gAppGraphics->m_csMoveList = g_csMoveList;
 
-	gWinHeight = numRows * gAppGraphics->m_cellSize + gAppGraphics->m_borderTop + gAppGraphics->m_borderBot;
-	gWinWidth  = gAppGraphics->m_borderL + numCols * gAppGraphics->m_cellSize + gAppGraphics->m_borderR + gAppGraphics->m_historyW;
+	gWinHeight = numRows * gAppGraphics->m_cellSize +
+				 gAppGraphics->m_borderTop +
+				 gAppGraphics->m_borderBot;
+	gWinWidth  = gAppGraphics->m_borderL +
+				 numCols * gAppGraphics->m_cellSize +
+				 gAppGraphics->m_borderR +
+				 gAppGraphics->m_historyW;
 
 	MyRegisterClass(hInstance);
 
@@ -162,7 +165,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 #ifdef _DEBUG
 	else {
 		// non threaded debug mode
-		pThread = new CConnect3AIThread(4, 3, 3);
+		pThread = new CConnect3AIThread(numRows, numCols, numCons);
 		if (pThread != NULL) {
 			gAppGraphics->m_pThreadAI = pThread;
 			pThread->setCellSize(80);
@@ -174,11 +177,21 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	}
 #endif // _DEBUG
 
+	// Expects resource ID value to be dependent on length of time out for each level
+	pThread->setTimeOut(IDM_LEVEL_10SECONDS-IDM_LEVEL_FIRSTLEVEL);
+	HMENU hmenuMain = GetMenu(g_hWnd);
+	CheckMenuItem(hmenuMain, IDM_LEVEL_10SECONDS, MF_CHECKED);
+				
+	ShowWindow(g_hWnd, nCmdShow);
+	UpdateWindow(g_hWnd);
+
 	// prime the message structure
 	PeekMessage(&msg, NULL, 0U, 0U, PM_NOREMOVE);
 
 	// Create a timer to ensure timely screen redraws
-	UINT RenderTimer = ::SetTimer(NULL, 12345, FRAMESPERSEC, RenderTimerCallBack);
+	UINT RenderTimer = ::SetTimer(
+		NULL, 12345, FRAMESPERSEC, RenderTimerCallBack
+	);
 	
 
 	bool bGotMsg;
@@ -188,9 +201,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 		if (bGotMsg)
 		{
+			if (!TranslateAccelerator(g_hWnd, hAccelTable, &msg))
+			{
+				TranslateMessage(&msg);
+				DispatchMessage(&msg);
+			}
 			// Translate and dispatch the message
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			//TranslateMessage(&msg);
+			//DispatchMessage(&msg);
 		}
 		//::Sleep(250);
 	}
@@ -258,8 +276,8 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-   ShowWindow(g_hWnd, nCmdShow);
-   UpdateWindow(g_hWnd);
+   //ShowWindow(g_hWnd, nCmdShow);
+   //UpdateWindow(g_hWnd);
 
    return TRUE;
 }
@@ -294,81 +312,70 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_ABOUT:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
 			break;
-		case ID_HELP_HELP:
+		case IDM_HELP:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_HELPBOX), hWnd, Help);
 			break;
 		case IDM_NEWGAME:
 			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -1; 
-				p->y = -1; 
-				pThread->m_qClicks.push(p);
-				break;
-			}
-		case IDM_HINT:
-			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -2; 
-				p->y = -2; 
-				pThread->m_qClicks.push(p);
-				break;
-			}
-		case IDM_SWAPSIDES:
-			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -3; 
-				p->y = -3; 
-				pThread->m_qClicks.push(p);
-				break;
-			}
-		case IDM_ANALYSIS:
-			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -4; 
-				p->y = -4; 
-				pThread->m_qClicks.push(p);
-
-				break;
-			}
-		case IDM_SETUPGAME:
-			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -5; 
-				p->y = -5; 
-				pThread->m_qClicks.push(p);
-
-				break;
-			}
-		case IDM_UNDOMOVE:
-			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -6; 
-				p->y = -6; 
-				pThread->m_qClicks.push(p);
-
+				Cmd* c = new Cmd();
+				c->cmd = NEW_GAME;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
 				break;
 			}
 		case IDM_LEVEL_DISABLETIMER:
 			{
-				// bit of a kludge
-				// but communicate via bogus mouse coordinates
-				Point* p = new Point();
-				p->x = -7; 
-				p->y = -7; 
-				pThread->m_qClicks.push(p);
-
+				Cmd* c = new Cmd();
+				c->cmd = DISABLE_TIMER;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
+				break;
+			}
+		case IDM_HINT:
+			{
+				Cmd* c = new Cmd();
+				c->cmd = HINT;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
+				break;
+			}
+		case IDM_SWAPSIDES:
+			{
+				Cmd* c = new Cmd();
+				c->cmd = SWAP_SIDES;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
+				break;
+			}
+		case IDM_ANALYSIS:
+			{
+				Cmd* c = new Cmd();
+				c->cmd = ANALYSIS;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
+				break;
+			}
+		case IDM_SETUPGAME:
+			{
+				Cmd* c = new Cmd();
+				c->cmd = SETUP_GAME;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
+				break;
+			}
+		case IDM_UNDOMOVE:
+			{
+				Cmd* c = new Cmd();
+				c->cmd = UNDO;
+				c->p.x = 0; 
+				c->p.y = 0; 
+				pThread->m_qCmds.push(c);
 				break;
 			}
 		case IDM_FORCEMOVE:
@@ -385,13 +392,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_LEVEL_1MINUTE:
 			{
 				pThread->setTimeOut((wmId - IDM_LEVEL_0SECOND));
+
+				// Could probably query sub menu for the number of items instead
+				HMENU hmenuMain = GetMenu(hWnd);
+				for (int i=0; i<=IDM_LEVEL_LASTLEVEL-IDM_LEVEL_FIRSTLEVEL; i++) {
+					CheckMenuItem(hmenuMain, IDM_LEVEL_FIRSTLEVEL+i, MF_UNCHECKED);
+				}
+				CheckMenuItem(hmenuMain, wmId, MF_CHECKED);
 				break;
 			}
 		case IDM_EXIT:
-			DestroyWindow(hWnd);
-			DeleteCriticalSection( &g_csMoveList );
-			DeleteCriticalSection( &g_csCheckerList );
-			break;
+			{
+				int iResults = MessageBox(
+					NULL,
+					L"Are you sure you want to quit?",
+					L"Quit?",
+					MB_YESNO
+					);
+				if (iResults == IDYES) {
+					DestroyWindow(hWnd);
+					DeleteCriticalSection( &g_csMoveList );
+					DeleteCriticalSection( &g_csCheckerList );
+				}
+				break;
+			}
 		default:
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
@@ -401,10 +425,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_LBUTTONUP:
 		{
-			Point* p = new Point();
-			p->x = lParam & 0x0000FFFF; 
-			p->y = (lParam & 0xFFFF0000) >> 16; 
-			pThread->m_qClicks.push(p);
+			Cmd* c = new Cmd();
+			c->cmd = CLICK;
+			c->p.x = lParam & 0x0000FFFF; 
+			c->p.y = (lParam & 0xFFFF0000) >> 16; 
+			pThread->m_qCmds.push(c);
 			break;
 		}
 	case WM_RBUTTONUP:

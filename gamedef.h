@@ -3,9 +3,21 @@
 #include "StdAfx.h"
 #include <stdio.h>
 
-static const int NUMROWS = 4;
+static const int NUMROWS = 10;
 static const int NUMCOLS = 3;
 static const int NUMCONS = 3;
+
+enum eCmd {
+	CLICK,
+	UNDO,
+	FORCE_MOVE,
+	SWAP_SIDES,
+	HINT,
+	NEW_GAME,
+	ANALYSIS,
+	SETUP_GAME,
+	DISABLE_TIMER
+};
 
 #ifdef _DEBUG
 static const int FRAMESPERSEC = 50;
@@ -38,6 +50,10 @@ struct Move {
 	int moveNumber;
 	int color;
 	std::string comment;
+};
+struct Cmd {
+	eCmd cmd;
+	Point p;
 };
 
 static const int EMPTY = 2;
