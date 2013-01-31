@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <io.h> // Console
 #include <fcntl.h> // Console
+#include <Shellapi.h> // for CommandLineToArgvW()
 
 #define MAX_LOADSTRING 100
 
@@ -81,6 +82,30 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	int numRows = NUMROWS;
 	int numCols = NUMCOLS;
 	int numCons = NUMCONS;
+
+	// Parse command line arguments
+	LPTSTR *szArgList;
+	int argCount;
+
+	szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
+
+	if (szArgList && (argCount & 0x1)) {
+		for (int i = 1; i < argCount; i += 2) {
+			//MessageBox(NULL, szArgList[i], L"Arglist contents", MB_OK);
+
+			if (!_tcscmp(L"-rows", szArgList[i])) {
+				numRows = _tstoi(szArgList[i+1]);
+			}
+			if (!_tcscmp(L"-cols", szArgList[i])) {
+				numCols = _tstoi(szArgList[i+1]);
+			}
+			if (!_tcscmp(L"-conns", szArgList[i])) {
+				numCons = _tstoi(szArgList[i+1]);
+			}
+		}
+
+		LocalFree(szArgList);
+	}
 
 	InitializeCriticalSection( &g_csMoveList );
 	InitializeCriticalSection( &g_csCheckerList );
