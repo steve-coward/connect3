@@ -5,6 +5,8 @@
 #include "Connect3AIThread.h"
 #include <assert.h>
 #include <iostream>
+#include <fstream>
+#include <string>
 
 extern CRITICAL_SECTION g_csCheckerList;
 extern CRITICAL_SECTION g_csMoveList;
@@ -44,6 +46,69 @@ CConnect3AIThread::CConnect3AIThread(int numRows, int numCols, int numCons)
 	GameReset();
 }
 
+CConnect3AIThread::CConnect3AIThread(int numRows, int numCols, int numCons, std::wstring testFile)
+{
+#ifdef _DEBUG
+	//t.disable(true);
+	setTimeOut(10); // in seconds
+#else
+	setTimeOut(10); // in seconds
+#endif // _DEBUG
+#ifdef _DEBUG
+	m_bGraphicDebug = false;
+#endif // _DEBUG
+	m_bTimeOutOnDepthLimit = false;
+	m_bExit = false;
+	m_p1 = new player();
+	m_p2 = new player();
+	m_p1->human = true;
+	m_p1->_color = RED;
+	m_p1->color[0] = 255;
+	m_p1->color[1] = 0;
+	m_p1->color[2] = 0;
+	m_p2->human = false;
+	m_p2->_color = BLACK;
+	m_p2->color[0] = 0;
+	m_p2->color[1] = 0;
+	m_p2->color[2] = 0;
+	setNumRows(numRows);
+	setNumCols(numCols);
+	setNumConnections(numCons);
+	setWinMask();
+
+	m_vBoard.resize( getNumRows() , std::vector<int>( getNumCols() , 0 ) );
+
+	GameReset();
+
+	//setGameState(GAME_SETUP);
+
+	//std::string line;
+	//std::ifstream myfile (testFile);
+	//int lineno = 0;
+	//int i, j;
+	//if (myfile.is_open())
+	//{
+	//	while ( myfile.good() )
+	//	{
+	//		for (i=0; i<numRows; i++) {
+	//			std::getline(myfile, line);
+	//			for (j=0; j<numCols; j++) {
+	//				if (m_p1->_color == line[j]-'0') {
+	//					DoMove(line[j]-'0', m_p1, true);
+	//				}
+	//				else if (m_p2->_color == line[j]-'0') {
+	//					DoMove(line[j]-'0', m_p2, true);
+	//				}
+	//			}
+	//		}
+	//		
+	//		std::cout << line << std::endl;
+	//		lineno++;
+	//	}
+	//	myfile.close();
+	//}
+}
+
 CConnect3AIThread::~CConnect3AIThread(void)
 {
 	GameReset();
@@ -77,8 +142,6 @@ void CConnect3AIThread::GameReset()
 	clrNumEvals();
 	m_pTurn = m_p1;
 	m_pWait = m_p2;
-	m_pComputer = m_p2;
-	m_pHuman = m_p1;
 	setGameState(GAME_STARTED_PLAYER1_TO_MOVE);
 	setStatus("It's your turn");
 
@@ -119,7 +182,7 @@ void CConnect3AIThread::GameReset()
 // Return (row,column) pair of the move (zero-based).
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-bool CConnect3AIThread::CheckLegality(Point& p, int& r, int& c)
+bool CConnect3AIThread::CheckLegality(const Point& p, int& r, int& c)
 {
 	// must account for height of menu and title bar here
 	// since (x,y) = (0,0) just below menu bar and to right of side frame
@@ -143,7 +206,7 @@ bool CConnect3AIThread::CheckLegality(Point& p, int& r, int& c)
 // Return true if move was legal.
 //
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Move* CConnect3AIThread::DoHumanMove(Point& p)
+Move* CConnect3AIThread::DoHumanMove(const Point& p)
 {
 	int r, c;
 	Move* m = NULL;
@@ -211,15 +274,10 @@ void CConnect3AIThread::Connect3()
 								}
 								break;
 							}
-						case DISABLE_TIMER:
+						case DISABLETIMER:
 							{
 								// Toggle timer
-								if  (t.getDisable()) {
-									t.disable(false);
-								}
-								else {
-									t.disable(true);
-								}
+								t.setDisable(!t.getDisable());
 								break;
 							}
 						case UNDO:
@@ -227,6 +285,16 @@ void CConnect3AIThread::Connect3()
 								// Undo last two moves
 								UndoMove();
 								UndoMove();
+
+								if (m_gameState & GAME_OVER) {
+									if (m_pTurn->human) {
+										setGameState(GAME_STARTED_PLAYER1_TO_MOVE);
+									}
+									else {
+										setGameState(GAME_STARTED_PLAYER2_TO_MOVE);
+									}
+								}
+
 								break;
 							}
 						case SETUP_GAME:
@@ -238,45 +306,51 @@ void CConnect3AIThread::Connect3()
 							}
 						case HINT:
 							{
-								// Hint requested
-								DoMiniMax(true);
+								if (m_gameState & GAME_STARTED) {
+									// Hint requested
+									DoMiniMax(true);
+								}
 								break;
 							}
 						case SWAP_SIDES:
 							{
-								// Swap side requested
-								int tempc;
-								if (m_pTurn == m_p1) {
-									m_pTurn = m_p2;
-									m_pWait = m_p1;
-								}
-								else {
-									m_pTurn = m_p1;
-									m_pWait = m_p2;
-								}
+								if (m_gameState & GAME_STARTED) {
+									// Swap side requested
+									int tempc;
+									if (m_pTurn == m_p1) {
+										m_pTurn = m_p2;
+										m_pWait = m_p1;
+									}
+									else {
+										m_pTurn = m_p1;
+										m_pWait = m_p2;
+									}
 
-								tempc = m_p1->_color;
-								m_p1->_color = m_p2->_color;
-								m_p2->_color = tempc;
+									tempc = m_p1->_color;
+									m_p1->_color = m_p2->_color;
+									m_p2->_color = tempc;
 
-								tempc = m_p1->color[0];
-								m_p1->color[0] = m_p2->color[0];
-								m_p2->color[0] = tempc;
-								tempc = m_p1->color[1];
-								m_p1->color[1] = m_p2->color[1];
-								m_p2->color[1] = tempc;
-								tempc = m_p1->color[2];
-								m_p1->color[2] = m_p2->color[2];
-								m_p2->color[2] = tempc;
+									tempc = m_p1->color[0];
+									m_p1->color[0] = m_p2->color[0];
+									m_p2->color[0] = tempc;
+									tempc = m_p1->color[1];
+									m_p1->color[1] = m_p2->color[1];
+									m_p2->color[1] = tempc;
+									tempc = m_p1->color[2];
+									m_p1->color[2] = m_p2->color[2];
+									m_p2->color[2] = tempc;
+								}
 
 								break;
 							}
 						default:
 							{
-								if ((m = DoHumanMove(c->p)) != NULL) {
-									if (IncEvaluateWin(m->row, m->col)) {
-										setGameState(GAME_OVER_HUMAN_WINS);
-										setStatus("You Win");
+								if (m_gameState & GAME_STARTED) {
+									if ((m = DoHumanMove(c->p)) != NULL) {
+										if (IncEvaluateWin(m->row, m->col)) {
+											setGameState(GAME_OVER_HUMAN_WINS);
+											setStatus("You Win");
+										}
 									}
 								}
 							}
@@ -285,20 +359,22 @@ void CConnect3AIThread::Connect3()
 				}
 			}
 			else  {
-				// do computer AI
-				setStatus("It's the computer's turn");
-				m = DoMiniMax(false);
-				std::cout << "Computer has moved.\n";
+				if (m_gameState & GAME_STARTED) {
+					// do computer AI
+					setStatus("It's the computer's turn");
+					m = DoMiniMax(false);
+					std::cout << "Computer has moved.\n";
 
-				if (IncEvaluateWin(m->row, m->col)) {
-					setGameState(GAME_OVER_COMPUTER_WINS);
-					setStatus("Computer Wins");
+					if (IncEvaluateWin(m->row, m->col)) {
+						setGameState(GAME_OVER_COMPUTER_WINS);
+						setStatus("Computer Wins");
+					}
 				}
 			}
 
 			if ((m_gameState != GAME_OVER_COMPUTER_WINS) &&
 				(m_gameState != GAME_OVER_HUMAN_WINS) &&
-				        GameOver(&m_vBoard))
+				        BoardFull(&m_vBoard))
 			{
 				setGameState(GAME_OVER_DRAW);
 				setStatus("Drawn Game");
@@ -339,7 +415,7 @@ void CConnect3AIThread::Connect3()
 									// Disallow last placement.
 									UndoMove();
 								}
-								else if (GameOver(&m_vBoard)) {
+								else if (BoardFull(&m_vBoard)) {
 									// Board is completely full.
 									UndoMove();
 								}
@@ -372,11 +448,11 @@ void CConnect3AIThread::Connect3()
 // Return row that the checker was placed in.
 // 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-int CConnect3AIThread::DoMove(int col, player* p, bool bPlace)
+int CConnect3AIThread::DoMove(const int col, player* p, bool bPlace)
 {
 	int row;
 	
-	assert(p == m_pTurn);
+	assert((p == m_pTurn) || (m_gameState == GAME_SETUP));
 
 	for (row=0;row<getNumRows();row++) {
 		if (m_vBoard.at(row).at(col) == EMPTY) {
@@ -530,11 +606,11 @@ int CConnect3AIThread::MiniMaxHuman(
 	// The computer (max) player just made a move,
 	// so evaluate that move here
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
+		return(numEmptySlots+1);
+	}
+	else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
 		return(numEmptySlots);
 	}
-	//else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
-	//	return(numEmptySlots-1);
-	//}
 	else if (depth >= getDepthLimit()) {
 		m_bHitDepthLimit = true;
 		return(alpha);
@@ -632,6 +708,9 @@ int CConnect3AIThread::MiniMaxComputer(
 	// The human (min) player just made a move,
 	// so evaluate that move here
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
+		return(-numEmptySlots-1);
+	}
+	else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
 		return(-numEmptySlots);
 	}
 	else if (depth >= getDepthLimit()) {
@@ -730,6 +809,7 @@ Move* CConnect3AIThread::DoMiniMax(bool bHintMode)
 
 	// Reset timer to enable time out of AI
 	t.start();
+	clrNumEvals();
 
 #ifdef _DEBUG
 	// Disable iterative deepening for debug mode
@@ -932,11 +1012,10 @@ Move* CConnect3AIThread::DoMiniMax(bool bHintMode)
 
 	// Reset timer for next player
 	t.start();
-	clrNumEvals();
 
 	return(m);
 }
-bool CConnect3AIThread::ColOpen(intv2d& board, int col, int* row)
+bool CConnect3AIThread::ColOpen(intv2d& board, int col, int* row) const
 {
 	int r;
 
@@ -952,7 +1031,7 @@ bool CConnect3AIThread::ColOpen(intv2d& board, int col, int* row)
 }
 
 // check only top row for an empty slot
-bool CConnect3AIThread::GameOver(intv2d* board)
+bool CConnect3AIThread::BoardFull(const intv2d* board) const
 {
 	int r, c;
 

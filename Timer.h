@@ -11,7 +11,7 @@ private:
 	bool m_bDisabled;
 public:
 	void start();
-	void disable(bool bDisable);
+	void setDisable(bool bDisable);
 	bool getDisable() { return(m_bDisabled); }
 
 	unsigned long elapsedTime();

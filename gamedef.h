@@ -16,7 +16,7 @@ enum eCmd {
 	NEW_GAME,
 	ANALYSIS,
 	SETUP_GAME,
-	DISABLE_TIMER
+	DISABLETIMER
 };
 
 #ifdef _DEBUG
@@ -56,9 +56,11 @@ struct Cmd {
 	Point p;
 };
 
+// These encodings are not arbitrary.
+// RED and BLACK must differ only in lsb.
 static const int EMPTY = 2;
-static const int RED = 0;
-static const int BLACK = 1;
+static const int RED = 1;
+static const int BLACK = 0;
 
 std::string format_arg_list(const char *fmt, va_list args);
 std::string format(const char *fmt, ...);

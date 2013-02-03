@@ -44,8 +44,6 @@ private:
 
 	player* m_p1;
 	player* m_p2;
-	player* m_pHuman;
-	player* m_pComputer;
 	player* m_pWait; // player whose turn it is not
 private:
 	player* m_pTurn; // player whose turn it is
@@ -56,6 +54,7 @@ private:
 	CTimer t;
 	unsigned long m_timeoutSec;
 public:
+	void setDisable(bool bDisable) { t.setDisable(bDisable); }
 	void setTimeOut(unsigned long timeoutSec) { m_timeoutSec = timeoutSec; }
 	unsigned long getTimeOut() {return(m_timeoutSec); }
 
@@ -66,6 +65,7 @@ public:
 
 public:
 	CConnect3AIThread(int numRows, int numCols, int numCons);
+	CConnect3AIThread(int numRows, int numCols, int numCons, std::wstring testFile);
 	~CConnect3AIThread(void);
 
 	// Thread entry
@@ -90,14 +90,14 @@ private:
 		int pcol,
 		int alpha,
 		int beta);
-	Move* DoHumanMove(Point& p);
-	int DoMove(int col, player* p, bool bPlace);
+	Move* DoHumanMove(const Point& p);
+	int DoMove(const int col, player* p, bool bPlace);
 	void UndoMove();
-	bool GameOver(intv2d* board);
+	bool BoardFull(const intv2d* board) const;
 	int IncEvaluateWin(int row, int col);
 	int IncEvaluateBlock(int row, int col);
-	bool ColOpen(intv2d& board, int col, int* row);
-	bool CheckLegality(Point& p, int& r, int& c);
+	bool ColOpen(intv2d& board, int col, int* row) const;
+	bool CheckLegality(const Point& p, int& r, int& c);
 #ifdef _DEBUG
 	void prettyPrintBoard(intv2d* pvBoard, int boardNum);
 #endif // _DEBUG
@@ -157,12 +157,12 @@ private:
 	int m_numRows;
 public:
 	void setNumRows(int numRows) { m_numRows = numRows; }
-	int getNumRows() { return(m_numRows); }
+	int getNumRows() const { return(m_numRows); }
 private:
 	int m_numCols;
 public:
 	void setNumCols(int numCols) { m_numCols = numCols; }
-	int getNumCols() { return(m_numCols); }
+	int getNumCols() const { return(m_numCols); }
 private:
 	int m_numSlots;
 public:

@@ -7,7 +7,7 @@ void CTimer::start() {
 	m_begTime = clock();
 }
 
-void CTimer::disable(bool bDisable) {
+void CTimer::setDisable(bool bDisable) {
 	m_bDisabled = bDisable;
 }
 

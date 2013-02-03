@@ -15,6 +15,8 @@
 #include <io.h> // Console
 #include <fcntl.h> // Console
 #include <Shellapi.h> // for CommandLineToArgvW()
+#include <fstream>
+#include <string>
 
 #define MAX_LOADSTRING 100
 
@@ -68,6 +70,25 @@ VOID CALLBACK RenderTimerCallBack(
 	//std::cout << "Finished Rendering.\n" << std::flush;
 }
 
+VOID setTimeOut(int timeInSec) {
+	if (pThread != NULL) {
+		if (timeInSec <= 0) {
+			pThread->setDisable(true);
+		}
+		else {
+			pThread->setDisable(false);
+			pThread->setTimeOut(timeInSec);
+
+			// Could probably query sub menu for the number of items instead
+			HMENU hmenuMain = GetMenu(g_hWnd);
+			for (int i=0; i<=IDM_LEVEL_LASTLEVEL-IDM_LEVEL_FIRSTLEVEL; i++) {
+				CheckMenuItem(hmenuMain, IDM_LEVEL_FIRSTLEVEL+i, MF_UNCHECKED);
+			}
+			CheckMenuItem(hmenuMain, IDM_LEVEL_FIRSTLEVEL+timeInSec, MF_CHECKED);
+		}
+	}
+}
+
 int APIENTRY _tWinMain(HINSTANCE hInstance,
                      HINSTANCE hPrevInstance,
                      LPTSTR    lpCmdLine,
@@ -82,9 +103,12 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 	int numRows = NUMROWS;
 	int numCols = NUMCOLS;
 	int numCons = NUMCONS;
+	int searchTimeInSec = 0;
 
 	// Parse command line arguments
 	LPTSTR *szArgList;
+	std::wstring szFileName;
+	
 	int argCount;
 
 	szArgList = CommandLineToArgvW(GetCommandLine(), &argCount);
@@ -101,6 +125,13 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 			}
 			if (!_tcscmp(L"-conns", szArgList[i])) {
 				numCons = _tstoi(szArgList[i+1]);
+			}
+			if (!_tcscmp(L"-level", szArgList[i])) {
+				searchTimeInSec = _tstoi(szArgList[i+1]);
+			}
+			if (!_tcscmp(L"-file", szArgList[i])) {
+				//wcscpy(szFileName, szArgList[i+1]);
+				szFileName = std::wstring(szArgList[i+1]);
 			}
 		}
 
@@ -154,37 +185,42 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 
 	bool bDoThread = true;
 	if (bDoThread) {
-		pThread = new CConnect3AIThread(numRows, numCols, numCons);
-		if (pThread != NULL) {
-			HANDLE hThread;
-			unsigned ThreadID;
-			hThread = (HANDLE)_beginthreadex(
-				NULL,
-				0,
-				Connect3AIThreadFunc,
-				(void*)pThread,
-				CREATE_SUSPENDED,
-				&ThreadID
-				);
+		if (szFileName.empty()) {
+			pThread = new CConnect3AIThread(numRows, numCols, numCons);
+			if (pThread != NULL) {
+				HANDLE hThread;
+				unsigned ThreadID;
+				hThread = (HANDLE)_beginthreadex(
+					NULL,
+					0,
+					Connect3AIThreadFunc,
+					(void*)pThread,
+					CREATE_SUSPENDED,
+					&ThreadID
+					);
 
-			if (hThread == NULL) {
-				delete pThread;
-				pThread = NULL;
-				return 1;
-			}
-			else {
-				gAppGraphics->m_pThreadAI = pThread;
-				pThread->setThreadID(ThreadID);
-				pThread->setThreadHandle(hThread);
-				pThread->setParentThreadID(GetCurrentThreadId());
-				pThread->setCellSize(gAppGraphics->m_cellSize);
-				pThread->setBoardPosX(gAppGraphics->m_borderL);
-				pThread->setBoardPosY(gAppGraphics->m_borderBot);
-				pThread->setDisplayHeight(gAppGraphics->m_winHeight);
-				pThread->setDisplayWidth(gAppGraphics->m_winWidth);
+				if (hThread == NULL) {
+					delete pThread;
+					pThread = NULL;
+					return 1;
+				}
+				else {
+					gAppGraphics->m_pThreadAI = pThread;
+					pThread->setThreadID(ThreadID);
+					pThread->setThreadHandle(hThread);
+					pThread->setParentThreadID(GetCurrentThreadId());
+					pThread->setCellSize(gAppGraphics->m_cellSize);
+					pThread->setBoardPosX(gAppGraphics->m_borderL);
+					pThread->setBoardPosY(gAppGraphics->m_borderBot);
+					pThread->setDisplayHeight(gAppGraphics->m_winHeight);
+					pThread->setDisplayWidth(gAppGraphics->m_winWidth);
 
-				ResumeThread(hThread);
+					ResumeThread(hThread);
+				}
 			}
+		}
+		else {
+			pThread = new CConnect3AIThread(numRows, numCols, numCons, szFileName);
 		}
 	}
 #ifdef _DEBUG
@@ -203,9 +239,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 #endif // _DEBUG
 
 	// Expects resource ID value to be dependent on length of time out for each level
-	pThread->setTimeOut(IDM_LEVEL_10SECONDS-IDM_LEVEL_FIRSTLEVEL);
-	HMENU hmenuMain = GetMenu(g_hWnd);
-	CheckMenuItem(hmenuMain, IDM_LEVEL_10SECONDS, MF_CHECKED);
+	setTimeOut(searchTimeInSec);
 				
 	ShowWindow(g_hWnd, nCmdShow);
 	UpdateWindow(g_hWnd);
@@ -352,7 +386,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_LEVEL_DISABLETIMER:
 			{
 				Cmd* c = new Cmd();
-				c->cmd = DISABLE_TIMER;
+				c->cmd = DISABLETIMER;
 				c->p.x = 0; 
 				c->p.y = 0; 
 				pThread->m_qCmds.push(c);
@@ -416,14 +450,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		case IDM_LEVEL_30SECONDS:
 		case IDM_LEVEL_1MINUTE:
 			{
-				pThread->setTimeOut((wmId - IDM_LEVEL_0SECOND));
-
-				// Could probably query sub menu for the number of items instead
-				HMENU hmenuMain = GetMenu(hWnd);
-				for (int i=0; i<=IDM_LEVEL_LASTLEVEL-IDM_LEVEL_FIRSTLEVEL; i++) {
-					CheckMenuItem(hmenuMain, IDM_LEVEL_FIRSTLEVEL+i, MF_UNCHECKED);
-				}
-				CheckMenuItem(hmenuMain, wmId, MF_CHECKED);
+				setTimeOut(wmId - IDM_LEVEL_FIRSTLEVEL);
+				
 				break;
 			}
 		case IDM_EXIT:
