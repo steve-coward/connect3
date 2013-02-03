@@ -3,9 +3,9 @@
 #include "StdAfx.h"
 #include <stdio.h>
 
-static const int NUMROWS = 10;
-static const int NUMCOLS = 3;
-static const int NUMCONS = 3;
+static const int NUMROWS = 6;
+static const int NUMCOLS = 7;
+static const int NUMCONS = 4;
 
 enum eCmd {
 	CLICK,

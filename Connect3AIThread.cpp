@@ -215,9 +215,7 @@ Move* CConnect3AIThread::DoHumanMove(const Point& p)
 		DoMove(c, m_pTurn, true);
 		m = m_listMoves.back();
 		if (m_bAnalysisMode) {
-			Move* hint = DoMiniMax(true);
-			m_listMoves.back()->comment = hint->comment;
-			delete hint;
+			DoMiniMax(true);
 		}
 		else if (m_bGameSetup) {
 			// Output display row numbering starts at 1. 
@@ -249,7 +247,7 @@ void CConnect3AIThread::Connect3()
 
 		//::Sleep(1000);
 		if (m_gameState & (GAME_STARTED | GAME_OVER)) {
-			Move* m;
+			Move* m = NULL;
 			if (m_pTurn->human) {
 				setStatus("It's your turn");
 				while (!m_qCmds.empty()) {
@@ -308,7 +306,7 @@ void CConnect3AIThread::Connect3()
 							{
 								if (m_gameState & GAME_STARTED) {
 									// Hint requested
-									DoMiniMax(true);
+									m = DoMiniMax(true);
 								}
 								break;
 							}
@@ -346,12 +344,7 @@ void CConnect3AIThread::Connect3()
 						default:
 							{
 								if (m_gameState & GAME_STARTED) {
-									if ((m = DoHumanMove(c->p)) != NULL) {
-										if (IncEvaluateWin(m->row, m->col)) {
-											setGameState(GAME_OVER_HUMAN_WINS);
-											setStatus("You Win");
-										}
-									}
+									m = DoHumanMove(c->p);
 								}
 							}
 					}
@@ -359,25 +352,31 @@ void CConnect3AIThread::Connect3()
 				}
 			}
 			else  {
+				// computer's turn
 				if (m_gameState & GAME_STARTED) {
 					// do computer AI
 					setStatus("It's the computer's turn");
 					m = DoMiniMax(false);
 					std::cout << "Computer has moved.\n";
+				}
+			}
 
-					if (IncEvaluateWin(m->row, m->col)) {
+			if (m != NULL) {
+				if (IncEvaluateWin(m->row, m->col)) {
+					if (m_pTurn->human) {
+						setGameState(GAME_OVER_HUMAN_WINS);
+						setStatus("You Win");
+					}
+					else {
 						setGameState(GAME_OVER_COMPUTER_WINS);
 						setStatus("Computer Wins");
 					}
 				}
-			}
-
-			if ((m_gameState != GAME_OVER_COMPUTER_WINS) &&
-				(m_gameState != GAME_OVER_HUMAN_WINS) &&
-				        BoardFull(&m_vBoard))
-			{
-				setGameState(GAME_OVER_DRAW);
-				setStatus("Drawn Game");
+				else if ((m_gameState != GAME_OVER_DRAW) && BoardFull(&m_vBoard))
+				{
+					setGameState(GAME_OVER_DRAW);
+					setStatus("Drawn Game");
+				}
 			}
 		}
 		else if (m_gameState == GAME_SETUP) {
@@ -551,7 +550,7 @@ int CConnect3AIThread::DoMove(const int col, player* p, bool bPlace)
 // Pop a checker from the checker list for display.
 // Pop a move onto the move list for move history.
 // Rotate turns.
-// 
+// Issue: Affects symmetry.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 void CConnect3AIThread::UndoMove()
 {
@@ -597,8 +596,7 @@ int CConnect3AIThread::MiniMaxHuman(
 	int prow,
 	int pcol,
 	int alpha,
-	int beta
-	)
+	int beta)
 {
 	int row, col, mc, mcc;
 	int v, minV;
@@ -608,12 +606,14 @@ int CConnect3AIThread::MiniMaxHuman(
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
 		return(numEmptySlots);
 	}
-	//else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
-	//	return(numEmptySlots);
-	//}
 	else if (depth >= getDepthLimit()) {
 		m_bHitDepthLimit = true;
-		return(alpha);
+		if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
+			return(numEmptySlots-1);
+		}
+		else {
+			return(alpha);
+		}
 	}
 	else if (getForceMove()) {
 		m_bTimedOut = true;
@@ -710,12 +710,14 @@ int CConnect3AIThread::MiniMaxComputer(
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
 		return(-numEmptySlots);
 	}
-	//else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
-	//	return(-numEmptySlots);
-	//}
 	else if (depth >= getDepthLimit()) {
 		m_bHitDepthLimit = true;
-		return(alpha);
+		if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
+			return(-numEmptySlots+1);
+		}
+		else {
+			return(alpha);
+		}
 	}
 	else if (getForceMove()) {
 		m_bTimedOut = true;
@@ -872,142 +874,13 @@ Move* CConnect3AIThread::DoMiniMax(bool bHintMode)
 
 	// Now actually perform the move that was just calculated
 	row = DoMove(bestCol, m_pTurn, !bHintMode);
-	m = m_listMoves.back();
+	if (!m_listMoves.empty()) {
+		m = m_listMoves.back();
+	}
 
 	// Form an intelligent comment on the move results
 	if (m != NULL) {
-		if (bHintMode) {
-			std::cout << "The computer recommends column ";
-			std::cout << bestCol << std::endl << std::flush;
-			if (bestV == 0) {
-				if ((getNumSlots()-m_plyNum+1) == 0) {
-					m->comment = 
-						format("%2d. %c%d Drawn Game (%d s)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						t.elapsedTime()
-						);
-				}
-				else {
-					m->comment =
-						format("%2d. %c%d Draw in %d moves (%d s)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						getNumSlots()-m_plyNum,
-						t.elapsedTime()
-						);
-				}
-			}
-			else if (bestV > 0) {
-				if ((getNumSlots()-m_plyNum-bestV+1) == 0) {
-					m->comment =
-						format("%2d. %c%d Computer wins! (%d s)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						t.elapsedTime()
-						);
-				}
-				else {
-					m->comment =
-						format("%2d. %c%d Computer wins in %d moves (%d s)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						getNumSlots()-m_plyNum-bestV+1,
-						t.elapsedTime()
-						);
-				}
-			}
-		}
-		else {
-			if (m_bTimedOut|m_bHitDepthLimit) {
-				m->comment =
-					format("%2d. %c%d Search timed out (%d s/%d/%d)",
-					m_plyNum,
-					bestCol+'a',
-					row+1,
-					t.elapsedTime(),
-					getNumEvals(),
-					getDepthLimit()
-					);
-			}
-			else if (bestV == 0) {
-				if ((getNumSlots()-m_plyNum) == 0) {
-					m->comment =
-						format("%2d. %c%d Drawn Game (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						t.elapsedTime(),
-						getNumEvals(),
-						getDepthLimit());
-				}
-				else {
-					m->comment =
-						format("%2d. %c%d Draw in %d moves (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						getNumSlots()-m_plyNum,
-						t.elapsedTime(),
-						getNumEvals(), getDepthLimit()
-						);
-				}
-			}
-			else if (bestV > 0) {
-				if ((getNumSlots()-m_plyNum-bestV+1) == 0) {
-					m->comment =
-						format("%2d. %c%d Computer wins! (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						t.elapsedTime(),
-						getNumEvals(),
-						getDepthLimit()
-						);
-				}
-				else {
-					m->comment =
-						format("%2d. %c%d Computer wins in %d moves (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						getNumSlots()-m_plyNum-bestV+1,
-						t.elapsedTime(),
-						getNumEvals(),
-						getDepthLimit()
-						);
-				}
-			}
-			else if (bestV < 0) {
-				if ((getNumSlots()-m_plyNum-bestV) == 0) {
-					m->comment =
-						format("%2d. %c%d Human wins! (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						t.elapsedTime(),
-						getNumEvals(),
-						getDepthLimit()
-						);
-				}
-				else {
-					m->comment =
-						format("%2d. %c%d Human wins in %d moves (%d s/%d/%d)",
-						m_plyNum,
-						bestCol+'a',
-						row+1,
-						getNumSlots()-m_plyNum+bestV+1,
-						t.elapsedTime(),
-						getNumEvals(),
-						getDepthLimit()
-						);
-				}
-			}
-		}
+		m->comment = FormatComment(bestCol, bestV, row, bHintMode);
 	}
 
 	// Reset timer for next player
@@ -1015,6 +888,158 @@ Move* CConnect3AIThread::DoMiniMax(bool bHintMode)
 
 	return(m);
 }
+
+// Form an intelligent comment on the move results
+std::string CConnect3AIThread::FormatComment(int bestCol, int bestV, int row, bool bHintMode) {
+	if (bHintMode) {
+		std::cout << "The computer recommends column ";
+		std::cout << bestCol << std::endl << std::flush;
+		if (bestV == 0) {
+			if ((getNumSlots()-m_plyNum+1) == 0) {
+				return(
+					format("%2d. %c%d Drawn Game (%d s)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					t.elapsedTime()
+					)
+					);
+			}
+			else {
+				return(
+					format("%2d. %c%d Draw in %d moves (%d s)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					getNumSlots()-m_plyNum,
+					t.elapsedTime()
+					)
+					);
+			}
+		}
+		else if (bestV > 0) {
+			if ((getNumSlots()-m_plyNum-bestV+1) == 0) {
+				return(
+					format("%2d. %c%d Computer wins! (%d s)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					t.elapsedTime()
+					)
+					);
+			}
+			else {
+				return(
+					format("%2d. %c%d Computer wins in %d moves (%d s)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					getNumSlots()-m_plyNum-bestV+1,
+					t.elapsedTime()
+					)
+					);
+			}
+		}
+	}
+	else {
+		if (m_bTimedOut|m_bHitDepthLimit) {
+			return(
+				format("%2d. %c%d Search timed out (%d s/%d/%d)",
+				m_plyNum,
+				bestCol+'a',
+				row+1,
+				t.elapsedTime(),
+				getNumEvals(),
+				getDepthLimit()
+				)
+				);
+		}
+		else if (bestV == 0) {
+			if ((getNumSlots()-m_plyNum) == 0) {
+				return(
+					format("%2d. %c%d Drawn Game (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+					);
+			}
+			else {
+				return(
+					format("%2d. %c%d Draw in %d moves (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					getNumSlots()-m_plyNum,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+					);
+			}
+		}
+		else if (bestV > 0) {
+			if ((getNumSlots()-m_plyNum-bestV+1) == 0) {
+				return(
+					format("%2d. %c%d Computer wins! (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+					);
+			}
+			else {
+				return(
+					format("%2d. %c%d Computer wins in %d moves (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					getNumSlots()-m_plyNum-bestV+1,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+					);
+			}
+		}
+		else if (bestV < 0) {
+			if ((getNumSlots()-m_plyNum-bestV) == 0) {
+				return(
+					format("%2d. %c%d Human wins! (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+					);
+			}
+			else {
+				return(
+					format("%2d. %c%d Human wins in %d moves (%d s/%d/%d)",
+					m_plyNum,
+					bestCol+'a',
+					row+1,
+					getNumSlots()-m_plyNum+bestV+1,
+					t.elapsedTime(),
+					getNumEvals(),
+					getDepthLimit()
+					)
+				);
+			}
+		}
+	}
+
+	return("No comment");
+}
+
 bool CConnect3AIThread::ColOpen(intv2d& board, int col, int* row) const
 {
 	int r;
@@ -1054,6 +1079,10 @@ bool CConnect3AIThread::BoardFull(const intv2d* board) const
 // Assume that magnitude of returned value is not important -
 // that is to say that it will only be compared to 0.
 //
+// To enable reasonable moves to be made when the search does not complete,
+// intelligence must be added to this evaluation function.  This intelligence
+// must be able to favor one board position over another based on board state
+// rather than on completion of a full search.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 int CConnect3AIThread::IncEvaluateWin(int row, int col)

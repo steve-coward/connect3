@@ -44,10 +44,10 @@ BEGIN
     POPUP "&Options"
     BEGIN
         MENUITEM "E&xit",                       IDM_EXIT
-        MENUITEM "&New Game",                    IDM_NEWGAME
-        MENUITEM "&Hint",                        IDM_HINT
-        MENUITEM "&Swap Sides",                  IDM_SWAPSIDES
-        MENUITEM "&Analysis",                    IDM_ANALYSIS
+        MENUITEM "&New Game",                   IDM_NEWGAME
+        MENUITEM "&Hint",                       IDM_HINT
+        MENUITEM "&Swap Sides",                 IDM_SWAPSIDES
+        MENUITEM "&Analysis",                   IDM_ANALYSIS
         POPUP "Level"
         BEGIN
             MENUITEM "1 second",                    IDM_LEVEL_1SECOND
@@ -58,9 +58,9 @@ BEGIN
             MENUITEM "1 minute",                    IDM_LEVEL_1MINUTE
             MENUITEM "Disable timer",               IDM_LEVEL_DISABLETIMER
         END
-        MENUITEM "Setup &Game",                  IDM_SETUPGAME
-        MENUITEM "&Force Move",                  IDM_FORCEMOVE
-        MENUITEM "&Undo Move",                   IDM_UNDOMOVE
+        MENUITEM "Setup &Game",                 IDM_SETUPGAME
+        MENUITEM "&Force Move",                 IDM_FORCEMOVE
+        MENUITEM "&Undo Move",                  IDM_UNDOMOVE
     END
     POPUP "&Help"
     BEGIN
@@ -79,14 +79,14 @@ IDC_CONNECT3 ACCELERATORS
 BEGIN
     "?",            IDM_ABOUT,              ASCII,  ALT
     "/",            IDM_ABOUT,              ASCII,  ALT
-	"x",            IDM_EXIT,               VIRTKEY,	CONTROL
-	"n",			IDM_NEWGAME,			ASCII
-	"h",			IDM_HINT,				ASCII
-	"s",			IDM_SWAPSIDES,			ASCII
-	"a",			IDM_ANALYSIS,			ASCII
-	"g",			IDM_SETUPGAME,			ASCII
-	"f",			IDM_FORCEMOVE,			ASCII
-	"u",			IDM_UNDOMOVE,			ASCII
+    "X",            IDM_EXIT,               VIRTKEY, CONTROL
+    "n",            IDM_NEWGAME,            ASCII   
+    "h",            IDM_HINT,               ASCII   
+    "s",            IDM_SWAPSIDES,          ASCII   
+    "a",            IDM_ANALYSIS,           ASCII   
+    "g",            IDM_SETUPGAME,          ASCII   
+    "f",            IDM_FORCEMOVE,          ASCII   
+    "u",            IDM_UNDOMOVE,           ASCII   
 END
 
 
@@ -103,22 +103,24 @@ BEGIN
     ICON            128,IDI_CONNECT3,14,14,21,20
     LTEXT           "Connect3, Version 1.0",IDC_STATIC,42,14,114,8,SS_NOPREFIX
     LTEXT           "Copyright © 2011 Steve Coward",IDC_STATIC,42,26,114,8
-    DEFPUSHBUTTON   "OK",IDOK,113,41,50,14,WS_GROUP
+    DEFPUSHBUTTON   "OK",IDOK,113,67,50,14,WS_GROUP
 END
 
-IDD_HELPBOX DIALOGEX 0, 0, 316, 157
+IDD_HELPBOX DIALOGEX 0, 0, 317, 170
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Help"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,117,114,50,14
-    LTEXT           "Hint: Game will calculate and report the best current move for the user.",IDC_STATIC,7,19,282,8
-    LTEXT           "Swap Sides: Swap sides with your opponent.",IDC_STATIC,7,30,144,8
-    LTEXT           "Analysis: Computer will provide move commentary for each of its moves.",IDC_STATIC,7,43,233,8
-    LTEXT           "Level: Defines the maximum amount of time the computer is allowed to calculate each move.",IDC_STATIC,7,56,296,8
-    LTEXT           "Setup Game: A mode by which the player may create a board position.",IDC_STATIC,7,69,227,8
-    LTEXT           "Force Move: Force the computer to make its move regardless of the Level setting.",IDC_STATIC,7,82,264,8
-    LTEXT           "Undo Move: Undo the last move for each player.",IDC_STATIC,7,95,157,8
+    DEFPUSHBUTTON   "OK",IDOK,133,134,50,14
+    LTEXT           "E(x)it: Exit game.",IDC_STATIC,7,17,282,8
+    LTEXT           "(N)ew Game: Quit current game and start a new game.",IDC_STATIC,7,30,282,8
+    LTEXT           "(H)int: Game will calculate and report the best current move for the user.",IDC_STATIC,7,43,282,8
+    LTEXT           "(S)wap Sides: Swap sides with your opponent.",IDC_STATIC,7,56,144,8
+    LTEXT           "(A)nalysis: Computer will provide move commentary for each of your moves.",IDC_STATIC,7,69,233,8
+    LTEXT           "Level: Defines the maximum amount of time the computer is allowed to calculate each move.",IDC_STATIC,7,82,296,8
+    LTEXT           "Setup (G)ame: A mode by which the player may create a board position.",IDC_STATIC,7,95,227,8
+    LTEXT           "(F)orce Move: Force the computer to make its move regardless of the Level setting.",IDC_STATIC,7,108,264,8
+    LTEXT           "(U)ndo Move: Undo the last move for each player.",IDC_STATIC,7,121,157,8
 END
 
 
@@ -141,9 +143,9 @@ BEGIN
     IDD_HELPBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 309
+        RIGHTMARGIN, 310
         TOPMARGIN, 15
-        BOTTOMMARGIN, 143
+        BOTTOMMARGIN, 156
     END
 END
 #endif    // APSTUDIO_INVOKED

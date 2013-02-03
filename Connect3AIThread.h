@@ -98,6 +98,7 @@ private:
 	int IncEvaluateBlock(int row, int col);
 	bool ColOpen(intv2d& board, int col, int* row) const;
 	bool CheckLegality(const Point& p, int& r, int& c);
+	std::string FormatComment(int bestCol, int bestV, int row, bool bHintMode);
 #ifdef _DEBUG
 	void prettyPrintBoard(intv2d* pvBoard, int boardNum);
 #endif // _DEBUG
