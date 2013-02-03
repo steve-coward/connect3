@@ -606,11 +606,11 @@ int CConnect3AIThread::MiniMaxHuman(
 	// The computer (max) player just made a move,
 	// so evaluate that move here
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
-		return(numEmptySlots+1);
-	}
-	else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
 		return(numEmptySlots);
 	}
+	//else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
+	//	return(numEmptySlots);
+	//}
 	else if (depth >= getDepthLimit()) {
 		m_bHitDepthLimit = true;
 		return(alpha);
@@ -708,11 +708,11 @@ int CConnect3AIThread::MiniMaxComputer(
 	// The human (min) player just made a move,
 	// so evaluate that move here
 	if ((v = IncEvaluateWin(prow, pcol)) > 0) {
-		return(-numEmptySlots-1);
-	}
-	else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
 		return(-numEmptySlots);
 	}
+	//else if ((v = IncEvaluateBlock(prow, pcol)) > 0) {
+	//	return(-numEmptySlots);
+	//}
 	else if (depth >= getDepthLimit()) {
 		m_bHitDepthLimit = true;
 		return(alpha);
