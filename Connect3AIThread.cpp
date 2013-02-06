@@ -248,7 +248,7 @@ void CConnect3AIThread::Connect3()
 		//::Sleep(1000);
 		if (m_gameState & (GAME_STARTED | GAME_OVER)) {
 			Move* m = NULL;
-			if (m_pTurn->human) {
+			if (m_pTurn->human || (m_gameState & GAME_OVER)) {
 				setStatus("It's your turn");
 				while (!m_qCmds.empty()) {
 					Cmd* c = m_qCmds.front();
